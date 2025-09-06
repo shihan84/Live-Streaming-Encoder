@@ -67,6 +67,12 @@ interface Stream {
   nullPid: number
   latency: number
   
+  // SRT-specific fields
+  srtLatency?: number
+  srtBandwidthOverhead?: number
+  srtPassphrase?: string
+  srtStreamId?: string
+  
   // Metadata fields
   description?: string
   genre?: string
@@ -114,7 +120,7 @@ interface InputSource {
 interface OutputDestination {
   id: string
   name: string
-  type: 'HLS' | 'RTMP' | 'DASH' | 'WebRTC'
+  type: 'HLS' | 'RTMP' | 'SRT' | 'DASH' | 'WebRTC'
   url: string
   status: 'active' | 'inactive' | 'error'
   viewers: number
@@ -162,6 +168,12 @@ export default function Home() {
       scte35Pid: 500,
       nullPid: 8191,
       latency: 2000,
+      
+      // SRT-specific fields
+      srtLatency: 120,
+      srtBandwidthOverhead: 25,
+      srtPassphrase: '',
+      srtStreamId: 'live1',
       
       // Metadata fields
       description: 'Main live streaming channel',
@@ -238,6 +250,15 @@ export default function Home() {
     },
     {
       id: '2',
+      name: 'SRT Output',
+      type: 'SRT',
+      url: 'srt://output.example.com:9999?streamid=live1',
+      status: 'active',
+      viewers: 850,
+      bitrate: 5000
+    },
+    {
+      id: '3',
       name: 'RTMP Backup',
       type: 'RTMP',
       url: 'rtmp://backup.example.com/live/stream1',
@@ -801,6 +822,30 @@ export default function Home() {
                       <Input id="latency" type="number" defaultValue="2000" />
                     </div>
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="srtLatency">SRT Latency (ms)</Label>
+                      <Input id="srtLatency" type="number" defaultValue="120" />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="srtBandwidth">SRT Bandwidth Overhead (%)</Label>
+                      <Input id="srtBandwidth" type="number" defaultValue="25" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="srtPassphrase">SRT Passphrase</Label>
+                      <Input id="srtPassphrase" type="password" placeholder="Optional passphrase" />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="srtStreamId">SRT Stream ID</Label>
+                      <Input id="srtStreamId" placeholder="live1" />
+                    </div>
+                  </div>
                   
                   <div className="flex items-center space-x-2">
                     <Switch id="scte35" defaultChecked />
@@ -1150,6 +1195,7 @@ export default function Home() {
                       <SelectContent>
                         <SelectItem value="HLS">HLS</SelectItem>
                         <SelectItem value="RTMP">RTMP</SelectItem>
+                        <SelectItem value="SRT">SRT</SelectItem>
                         <SelectItem value="DASH">DASH</SelectItem>
                         <SelectItem value="WebRTC">WebRTC</SelectItem>
                       </SelectContent>
@@ -1160,7 +1206,7 @@ export default function Home() {
                     <Label htmlFor="outputUrl">Output URL</Label>
                     <Input 
                       id="outputUrl" 
-                      placeholder="https://cdn.example.com/live/stream1/master.m3u8" 
+                      placeholder="srt://output.example.com:9999?streamid=live1" 
                     />
                   </div>
                   
