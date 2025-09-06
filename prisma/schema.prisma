@@ -1,0 +1,191 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Post {
+  id        String   @id @default(cuid())
+  title     String
+  content   String?
+  published Boolean  @default(false)
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Live Streaming Encoder Models
+
+model Stream {
+  id             String   @id @default(cuid())
+  name           String
+  inputUrl       String
+  outputUrl      String
+  status         StreamStatus @default(IDLE)
+  bitrate        Int      @default(5000)
+  resolution     String   @default("1920x1080")
+  scte35Enabled  Boolean  @default(true)
+  encoderPreset  String   @default("high")
+  gopSize        Int      @default(12)
+  bFrames        Int      @default(5)
+  profile        String   @default("high")
+  chroma         String   @default("4:2:0")
+  aspectRatio    String   @default("16:9")
+  keyframeInterval Int    @default(12)
+  pcr            String   @default("video_embedded")
+  audioCodec     String   @default("aac-lc")
+  audioBitrate   Int      @default(128)
+  audioLKFS      Int      @default(-20)
+  audioSampleRate Int     @default(48000)
+  scte35Pid      Int      @default(500)
+  nullPid        Int      @default(8191)
+  latency        Int      @default(2000)
+  
+  // Metadata fields
+  description    String?
+  genre          String?
+  language       String?  @default("en")
+  provider       String?
+  network        String?
+  channel        String?
+  category       String?
+  tags           String?   // JSON array of tags
+  customMetadata String?  // JSON object for custom metadata
+  epgId          String?  // Electronic Program Guide ID
+  contentRating  String?  // Content rating (e.g., TV-MA, PG, etc.)
+  copyright      String?
+  isLive         Boolean  @default(true)
+  startTime      DateTime?
+  endTime        DateTime?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  encodingSessions EncodingSession[]
+  adBreaks        AdBreak[]
+  
+  @@map("streams")
+}
+
+model EncodingSession {
+  id          String           @id @default(cuid())
+  streamId    String
+  status      EncodingStatus   @default(STARTING)
+  startTime   DateTime         @default(now())
+  endTime     DateTime?
+  progress    Int              @default(0)
+  inputBytes  Int              @default(0)
+  outputBytes Int             @default(0)
+  pid         Int?
+  logPath     String?
+  
+  // Relations
+  stream      Stream           @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  
+  @@map("encoding_sessions")
+}
+
+model AdBreak {
+  id            String        @id @default(cuid())
+  streamId      String
+  name          String?
+  scheduledTime DateTime
+  duration      Int           @default(600)
+  adId          String
+  description   String?
+  status        AdBreakStatus @default(SCHEDULED)
+  triggeredAt   DateTime?
+  completedAt   DateTime?
+  scte35Data    String?
+  providerName  String        @default("YourProvider")
+  providerId    String        @default("0x1")
+  autoReturn    Int           @default(600)
+  scteEventId   Int?          // Sequential SCTE Event ID
+  cueType       String        @default("CUE-OUT") // CUE-OUT, CUE-IN
+  preRollDuration Int         @default(0) // 0-10 seconds
+  crashOut      Boolean       @default(false) // Crash out scenario
+  scte35Pid     Int           @default(500)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  
+  // Relations
+  stream        Stream        @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  
+  @@map("ad_breaks")
+}
+
+model SystemSettings {
+  id              String   @id @default(cuid())
+  ffmpegPath      String   @default("/usr/local/bin/ffmpeg")
+  outputDirectory String   @default("/var/www/hls")
+  segmentDuration Int      @default(6)
+  playlistSize    Int      @default(5)
+  hlsTime         Int      @default(6)
+  hlsListSize     Int      @default(0)
+  hlsFlags        String   @default("delete_segments")
+  scte35Enabled   Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@map("system_settings")
+}
+
+model SystemLog {
+  id        String       @id @default(cuid())
+  level     LogLevel     @default(INFO)
+  message   String
+  component String?
+  metadata  String?
+  createdAt DateTime     @default(now())
+  
+  @@map("system_logs")
+}
+
+// Enums
+
+enum StreamStatus {
+  IDLE
+  ENCODING
+  ERROR
+  STOPPING
+}
+
+enum EncodingStatus {
+  STARTING
+  RUNNING
+  STOPPING
+  COMPLETED
+  ERROR
+}
+
+enum AdBreakStatus {
+  SCHEDULED
+  TRIGGERED
+  COMPLETED
+  CANCELLED
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+}

@@ -1,0 +1,56 @@
+# SCTE-35 tools container (threefive, x9k3, etc.)
+FROM python:3.9-alpine
+
+# Install system dependencies
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    openssl-dev \
+    git \
+    ffmpeg
+
+# Install Python dependencies
+RUN pip install --upgrade pip && \
+    pip install \
+        threefive \
+        m3ufu \
+        adbreak3 \
+        click \
+        requests \
+        python-dotenv
+
+# Clone SCTE-35 tools
+RUN git clone https://github.com/superkabuki/SCTE35_threefive.git /opt/SCTE35_threefive && \
+    git clone https://github.com/superkabuki/SCTE35_x9k3.git /opt/SCTE35_x9k3 && \
+    git clone https://github.com/superkabuki/adbreak3.git /opt/adbreak3 && \
+    git clone https://github.com/superkabuki/m3ufu.git /opt/m3ufu
+
+# Install Python tools from source
+RUN cd /opt/SCTE35_threefive && pip install -e . && \
+    cd /opt/SCTE35_x9k3 && pip install -e . && \
+    cd /opt/adbreak3 && pip install -e . && \
+    cd /opt/m3ufu && pip install -e .
+
+# Create directories
+RUN mkdir -p /var/www/hls /app/logs /app/scripts
+
+# Copy utility scripts
+COPY scripts/scte35-tools.py /app/scripts/
+COPY scripts/x9k3-segmenter.py /app/scripts/
+COPY scripts/adbreak-generator.py /app/scripts/
+
+# Make scripts executable
+RUN chmod +x /app/scripts/*.py
+
+# Set working directory
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup -g 1000 -S scte35 && \
+    adduser -u 1000 -S scte35 -G scte35
+
+USER scte35
+
+# Default command
+CMD ["/bin/sh"]

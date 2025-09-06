@@ -1,0 +1,87 @@
+# FFmpeg with SCTE-35 support based on superkabuki's SCTE35_FFmpeg
+FROM alpine:latest
+
+# Install dependencies
+RUN apk add --no-cache \
+    build-base \
+    yasm \
+    nasm \
+    git \
+    wget \
+    x264-dev \
+    x265-dev \
+    libvpx-dev \
+    libvorbis-dev \
+    libogg-dev \
+    libtheora-dev \
+    lame-dev \
+    fdk-aac-dev \
+    opus-dev \
+    libass-dev \
+    freetype-dev \
+    fontconfig-dev \
+    libxml2-dev \
+    fribidi-dev \
+    harfbuzz-dev \
+    libbluray-dev \
+    libva-dev \
+    libvdpau-dev \
+    libdrm-dev \
+    mesa-dev \
+    openssl-dev
+
+# Clone and build FFmpeg with SCTE-35 patch
+RUN git clone https://github.com/superkabuki/SCTE35_FFmpeg.git /ffmpeg && \
+    cd /ffmpeg && \
+    ./configure \
+    --prefix=/usr/local \
+    --enable-gpl \
+    --enable-nonfree \
+    --enable-libx264 \
+    --enable-libx265 \
+    --enable-libvpx \
+    --enable-libvorbis \
+    --enable-libogg \
+    --enable-libtheora \
+    --enable-libmp3lame \
+    --enable-libfdk-aac \
+    --enable-libopus \
+    --enable-libass \
+    --enable-libfreetype \
+    --enable-libfontconfig \
+    --enable-libxml2 \
+    --enable-libfribidi \
+    --enable-libharfbuzz \
+    --enable-libbluray \
+    --enable-libva \
+    --enable-libvdpau \
+    --enable-libdrm \
+    --enable-openssl \
+    --enable-scte35 \
+    --enable-scte35_parser \
+    --enable-scte35_muxer \
+    --enable-scte35_demuxer \
+    --enable-shared \
+    --disable-static && \
+    make -j$(nproc) && \
+    make install && \
+    ldconfig
+
+# Create directories
+RUN mkdir -p /var/www/hls /app/logs
+
+# Set working directory
+WORKDIR /app
+
+# Copy SCTE-35 utility scripts
+COPY scripts/ffmpeg-scte35.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/ffmpeg-scte35.sh
+
+# Create non-root user
+RUN addgroup -g 1000 -S ffmpeg && \
+    adduser -u 1000 -S ffmpeg -G ffmpeg
+
+USER ffmpeg
+
+# Default command
+CMD ["/bin/sh"]

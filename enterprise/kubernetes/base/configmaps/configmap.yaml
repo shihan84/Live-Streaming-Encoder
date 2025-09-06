@@ -1,0 +1,122 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: streaming-encoder-config
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: config
+data:
+  NODE_ENV: "production"
+  LOG_LEVEL: "info"
+  DATABASE_HOST: "postgres-service"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "streaming_db"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  KAFKA_BROKERS: "kafka-service:9092"
+  INFLUXDB_URL: "http://influxdb-service:8086"
+  INFLUXDB_ORG: "streaming_org"
+  INFLUXDB_BUCKET: "metrics"
+  MINIO_ENDPOINT: "minio-service:9000"
+  MINIO_BUCKET: "streaming-media"
+  SCTE35_PROVIDER_ID: "0x1"
+  SCTE35_PROVIDER_NAME: "StreamingProvider"
+  HLS_SEGMENT_DURATION: "6"
+  HLS_PLAYLIST_SIZE: "5"
+  ENCODER_PRESET: "medium"
+  ENCODER_GOP_SIZE: "2"
+  ENCODER_KEYFRAME_INTERVAL: "60"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: nginx
+data:
+  nginx.conf: |
+    user nginx;
+    worker_processes auto;
+    error_log /var/log/nginx/error.log warn;
+    pid /var/run/nginx.pid;
+    
+    events {
+        worker_connections 1024;
+        use epoll;
+        multi_accept on;
+    }
+    
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+        
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for"';
+        
+        access_log /var/log/nginx/access.log main;
+        
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        types_hash_max_size 2048;
+        
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 1024;
+        gzip_proxied any;
+        gzip_comp_level 6;
+        gzip_types
+            text/plain
+            text/css
+            text/xml
+            text/javascript
+            application/json
+            application/javascript
+            application/xml+rss
+            application/atom+xml;
+        
+        include /etc/nginx/conf.d/*.conf;
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    
+    scrape_configs:
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+    
+      - job_name: 'streaming-encoder-services'
+        static_configs:
+          - targets:
+            - 'stream-service:3000'
+            - 'ad-service:3001'
+            - 'encoder-service:3002'
+            - 'scte35-service:3003'
+            - 'monitor-service:3004'
+    
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+              - 'alertmanager:9093'

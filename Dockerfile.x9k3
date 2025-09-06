@@ -1,0 +1,46 @@
+# HLS segmenter with SCTE-35 injection (x9k3)
+FROM python:3.9-alpine
+
+# Install system dependencies
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    openssl-dev \
+    git \
+    ffmpeg
+
+# Install Python dependencies
+RUN pip install --upgrade pip && \
+    pip install \
+        threefive \
+        m3ufu \
+        click \
+        requests \
+        python-dotenv
+
+# Clone and install x9k3
+RUN git clone https://github.com/superkabuki/SCTE35_x9k3.git /opt/x9k3 && \
+    cd /opt/x9k3 && pip install -e .
+
+# Create directories
+RUN mkdir -p /var/www/hls /app/logs /app/scripts
+
+# Copy utility scripts
+COPY scripts/x9k3-segmenter.py /app/scripts/
+COPY scripts/hls-injector.py /app/scripts/
+
+# Make scripts executable
+RUN chmod +x /app/scripts/*.py
+
+# Set working directory
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup -g 1000 -S x9k3 && \
+    adduser -u 1000 -S x9k3 -G x9k3
+
+USER x9k3
+
+# Default command
+CMD ["/bin/sh"]

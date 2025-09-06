@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: streaming-encoder
+  labels:
+    name: streaming-encoder
+    app.kubernetes.io/part-of: streaming-encoder
+  annotations:
+    description: "Live Streaming Encoder with SCTE-35 Support"

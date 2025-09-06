@@ -1,0 +1,429 @@
+name: Enterprise Streaming Encoder CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ==========================================
+  # Code Quality & Security Scans
+  # ==========================================
+  code-quality:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest
+    outputs:
+      quality-score: ${{ steps.quality.outputs.score }}
+      security-passed: ${{ steps.security.outputs.passed }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run ESLint
+      id: lint
+      run: npm run lint
+      
+    - name: Run TypeScript validation
+      run: npx tsc --noEmit
+      
+    - name: Run security audit
+      id: security
+      run: npm audit --audit-level=moderate
+      
+    - name: Run SonarQube scan
+      uses: SonarSource/sonarqube-scan-action@master
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      
+    - name: Calculate quality score
+      id: quality
+      run: |
+        score=100
+        if [ "${{ steps.lint.outcome }}" != "success" ]; then score=$((score - 20)); fi
+        if [ "${{ steps.security.outcome }}" != "success" ]; then score=$((score - 30)); fi
+        echo "score=$score" >> $GITHUB_OUTPUT
+
+  # ==========================================
+  # Unit & Integration Tests
+  # ==========================================
+  testing:
+    name: Testing Suite
+    runs-on: ubuntu-latest
+    needs: code-quality
+    strategy:
+      matrix:
+        test-type: [unit, integration, e2e]
+    outputs:
+      coverage: ${{ steps.coverage.outputs.percent }}
+      tests-passed: ${{ steps.tests.outputs.passed }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run ${{ matrix.test-type }} tests
+      id: tests
+      run: |
+        case "${{ matrix.test-type }}" in
+          "unit")
+            npm run test:unit -- --coverage --coverage-reporters=text
+            ;;
+          "integration")
+            npm run test:integration
+            ;;
+          "e2e")
+            npm run test:e2e
+            ;;
+        esac
+        echo "passed=true" >> $GITHUB_OUTPUT
+      
+    - name: Upload coverage reports
+      if: matrix.test-type == 'unit'
+      id: coverage
+      run: |
+        coverage=$(npx coverage-summary-coverage coverage/coverage-summary.json)
+        echo "percent=$coverage" >> $GITHUB_OUTPUT
+      continue-on-error: true
+      
+    - name: Upload test artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: test-results-${{ matrix.test-type }}
+        path: |
+          coverage/
+          test-results/
+          playwright-report/
+
+  # ==========================================
+  # Container Image Building
+  # ==========================================
+  build-images:
+    name: Build Container Images
+    runs-on: ubuntu-latest
+    needs: [code-quality, testing]
+    strategy:
+      matrix:
+        service: [stream-service, ad-service, encoder-service, scte35-service, monitor-service, frontend-admin, frontend-dashboard]
+    outputs:
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tag: ${{ steps.meta.outputs.tags }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ matrix.service }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=raw,value=latest,enable={{is_default_branch}}
+          
+    - name: Build and push image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: enterprise/docker/Dockerfile.${{ matrix.service }}
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        build-args: |
+          NODE_ENV=production
+          BUILD_DATE=${{ github.event.created_at }}
+          VCS_REF=${{ github.sha }}
+          VCS_URL=${{ github.server_url }}/${{ github.repository }}
+
+  # ==========================================
+  # Security Scanning & Vulnerability Assessment
+  # ==========================================
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: build-images
+    strategy:
+      matrix:
+        scanner: [trivy, grype, snyk]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run ${{ matrix.scanner }} scan
+      uses: ./.github/actions/security-scan
+      with:
+        scanner: ${{ matrix.scanner }}
+        registry: ${{ env.REGISTRY }}
+        image: ${{ env.IMAGE_NAME }}
+        tag: ${{ needs.build-images.outputs.image-tag }}
+        
+    - name: Generate security report
+      run: |
+        echo "## Security Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "Scanner: ${{ matrix.scanner }}" >> $GITHUB_STEP_SUMMARY
+        echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================
+  # Staging Deployment
+  # ==========================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-images, security-scan]
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: '1.28.0'
+        
+    - name: Configure kubeconfig
+      run: |
+        mkdir -p $HOME/.kube
+        echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > $HOME/.kube/config
+        chmod 600 $HOME/.kube/config
+        
+    - name: Deploy to staging
+      run: |
+        kubectl apply -k enterprise/kubernetes/overlays/staging
+        kubectl rollout status deployment/stream-service -n streaming-encoder
+        kubectl rollout status deployment/ad-service -n streaming-encoder
+        kubectl rollout status deployment/encoder-service -n streaming-encoder
+        
+    - name: Run smoke tests
+      run: |
+        npm run test:smoke -- --env=staging
+        
+    - name: Verify deployment
+      run: |
+        kubectl get pods -n streaming-encoder
+        kubectl get services -n streaming-encoder
+
+  # ==========================================
+  # Production Deployment
+  # ==========================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-images, security-scan]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: '1.28.0'
+        
+    - name: Configure kubeconfig
+      run: |
+        mkdir -p $HOME/.kube
+        echo "${{ secrets.KUBECONFIG_PRODUCTION }}" | base64 -d > $HOME/.kube/config
+        chmod 600 $HOME/.kube/config
+        
+    - name: Pre-deployment checks
+      run: |
+        # Check if all services are healthy in current deployment
+        kubectl get pods -n streaming-encoder --field-selector=status.phase!=Running
+        
+    - name: Blue-green deployment
+      run: |
+        # Create new deployment with canary strategy
+        kubectl apply -k enterprise/kubernetes/overlays/production-canary
+        kubectl wait --for=condition=ready pod -l app=streaming-encoder,version=canary -n streaming-encoder --timeout=300s
+        
+    - name: Run integration tests
+      run: |
+        npm run test:integration -- --env=production
+        
+    - name: Traffic shift
+      run: |
+        # Gradually shift traffic to new deployment
+        kubectl patch ingress streaming-encoder -n streaming-encoder -p '{"spec":{"rules":[{"http":{"paths":[{"backend":{"service":{"name":"streaming-encoder-canary"}}}}]}}]}'
+        
+    - name: Monitor deployment
+      run: |
+        # Monitor for 10 minutes
+        for i in {1..60}; do
+          kubectl top pods -n streaming-encoder -l app=streaming-encoder,version=canary
+          sleep 10
+        done
+        
+    - name: Complete deployment
+      run: |
+        # Switch to new deployment
+        kubectl apply -k enterprise/kubernetes/overlays/production
+        kubectl delete deployment,service -l version=canary -n streaming-encoder
+
+  # ==========================================
+  # Performance & Load Testing
+  # ==========================================
+  performance-test:
+    name: Performance & Load Testing
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup k6
+      uses: grafana/k6-action@v0.3.0
+      
+    - name: Run load test
+      run: |
+        k6 run enterprise/tests/load-test.js --out json=results.json
+        
+    - name: Generate performance report
+      run: |
+        npm run generate:performance-report -- --file=results.json
+        
+    - name: Upload performance results
+      uses: actions/upload-artifact@v3
+      with:
+        name: performance-results
+        path: |
+          results.json
+          performance-report.html
+
+  # ==========================================
+  # Monitoring & Alerting Setup
+  # ==========================================
+  monitoring-setup:
+    name: Monitoring Setup
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup monitoring dashboards
+      run: |
+        # Deploy Grafana dashboards
+        kubectl apply -f enterprise/monitoring/grafana/dashboards/
+        
+    - name: Configure alerts
+      run: |
+        # Deploy alert rules
+        kubectl apply -f enterprise/monitoring/alertmanager/alert-rules/
+        
+    - name: Verify monitoring
+      run: |
+        # Check if all monitoring components are running
+        kubectl get pods -n monitoring
+        kubectl get prometheus -n monitoring
+
+  # ==========================================
+  # Documentation Generation
+  # ==========================================
+  generate-docs:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production]
+    if: always()
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Generate API documentation
+      run: |
+        npm run docs:generate
+        
+    - name: Generate architecture diagrams
+      run: |
+        npm run docs:diagrams
+        
+    - name: Upload documentation
+      uses: actions/upload-artifact@v3
+      with:
+        name: documentation
+        path: |
+          docs/api/
+          docs/architecture/
+          docs/deployment/
+
+  # ==========================================
+  # Deployment Summary
+  # ==========================================
+  deployment-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs: [code-quality, testing, security-scan, deploy-staging, deploy-production, performance-test, monitoring-setup]
+    if: always()
+    
+    steps:
+    - name: Generate deployment summary
+      run: |
+        echo "# Deployment Summary" >> $GITHUB_STEP_SUMMARY
+        echo "## Code Quality" >> $GITHUB_STEP_SUMMARY
+        echo "- Quality Score: ${{ needs.code-quality.outputs.quality-score }}%" >> $GITHUB_STEP_SUMMARY
+        echo "- Security Passed: ${{ needs.code-quality.outputs.security-passed }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Testing Results" >> $GITHUB_STEP_SUMMARY
+        echo "- Coverage: ${{ needs.testing.outputs.coverage }}%" >> $GITHUB_STEP_SUMMARY
+        echo "- Tests Passed: ${{ needs.testing.outputs.tests-passed }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Deployment Status" >> $GITHUB_STEP_SUMMARY
+        echo "- Staging: ${{ needs.deploy-staging.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Production: ${{ needs.deploy-production.result }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Images Built" >> $GITHUB_STEP_SUMMARY
+        echo "- Tag: ${{ needs.build-images.outputs.image-tag }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Digest: ${{ needs.build-images.outputs.image-digest }}" >> $GITHUB_STEP_SUMMARY

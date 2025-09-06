@@ -1,0 +1,468 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stream-service
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: stream-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: streaming-encoder
+      component: stream-service
+  template:
+    metadata:
+      labels:
+        app: streaming-encoder
+        component: stream-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: stream-service
+        image: streaming-encoder/stream-service:latest
+        ports:
+        - containerPort: 3000
+          name: http
+        - containerPort: 3001
+          name: metrics
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: streaming-encoder-config
+              key: NODE_ENV
+        - name: DATABASE_URL
+          value: "postgresql://$(DATABASE_USERNAME):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)"
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: DATABASE_USERNAME
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: DATABASE_PASSWORD
+        - name: REDIS_URL
+          value: "redis://$(REDIS_PASSWORD)@$(REDIS_HOST):$(REDIS_PORT)"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-credentials
+              key: REDIS_PASSWORD
+        - name: KAFKA_BROKERS
+          valueFrom:
+            configMapKeyRef:
+              name: streaming-encoder-config
+              key: KAFKA_BROKERS
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secret
+              key: JWT_SECRET
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 1
+        volumeMounts:
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: logs
+        emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ad-service
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: ad-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: streaming-encoder
+      component: ad-service
+  template:
+    metadata:
+      labels:
+        app: streaming-encoder
+        component: ad-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3001"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: ad-service
+        image: streaming-encoder/ad-service:latest
+        ports:
+        - containerPort: 3001
+          name: http
+        - containerPort: 3002
+          name: metrics
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: streaming-encoder-config
+              key: NODE_ENV
+        - name: DATABASE_URL
+          value: "postgresql://$(DATABASE_USERNAME):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)"
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: DATABASE_USERNAME
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: DATABASE_PASSWORD
+        - name: REDIS_URL
+          value: "redis://$(REDIS_PASSWORD)@$(REDIS_HOST):$(REDIS_PORT)"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-credentials
+              key: REDIS_PASSWORD
+        - name: KAFKA_BROKERS
+          valueFrom:
+            configMapKeyRef:
+              name: streaming-encoder-config
+              key: KAFKA_BROKERS
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: encoder-service
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: encoder-service
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: streaming-encoder
+      component: encoder-service
+  template:
+    metadata:
+      labels:
+        app: streaming-encoder
+        component: encoder-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3002"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: encoder-service
+        image: streaming-encoder/encoder-service:latest
+        ports:
+        - containerPort: 3002
+          name: http
+        - containerPort: 3003
+          name: metrics
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: streaming-encoder-config
+              key: NODE_ENV
+        - name: DATABASE_URL
+          value: "postgresql://$(DATABASE_USERNAME):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)"
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: DATABASE_USERNAME
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: DATABASE_PASSWORD
+        - name: REDIS_URL
+          value: "redis://$(REDIS_PASSWORD)@$(REDIS_HOST):$(REDIS_PORT)"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-credentials
+              key: REDIS_PASSWORD
+        - name: KAFKA_BROKERS
+          valueFrom:
+            configMapKeyRef:
+              name: streaming-encoder-config
+              key: KAFKA_BROKERS
+        - name: MINIO_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: streaming-encoder-config
+              key: MINIO_ENDPOINT
+        - name: MINIO_ROOT_USER
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: MINIO_ROOT_USER
+        - name: MINIO_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: MINIO_ROOT_PASSWORD
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 1Gi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3002
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 1
+        volumeMounts:
+        - name: hls-output
+          mountPath: /var/www/hls
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: hls-output
+        emptyDir: {}
+      - name: logs
+        emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scte35-service
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: scte35-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: streaming-encoder
+      component: scte35-service
+  template:
+    metadata:
+      labels:
+        app: streaming-encoder
+        component: scte35-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3003"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: scte35-service
+        image: streaming-encoder/scte35-service:latest
+        ports:
+        - containerPort: 3003
+          name: http
+        - containerPort: 3004
+          name: metrics
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: streaming-encoder-config
+              key: NODE_ENV
+        - name: DATABASE_URL
+          value: "postgresql://$(DATABASE_USERNAME):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)"
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: DATABASE_USERNAME
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: DATABASE_PASSWORD
+        - name: REDIS_URL
+          value: "redis://$(REDIS_PASSWORD)@$(REDIS_HOST):$(REDIS_PORT)"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-credentials
+              key: REDIS_PASSWORD
+        - name: SCTE35_PROVIDER_ID
+          valueFrom:
+            configMapKeyRef:
+              name: streaming-encoder-config
+              key: SCTE35_PROVIDER_ID
+        - name: SCTE35_PROVIDER_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: streaming-encoder-config
+              key: SCTE35_PROVIDER_NAME
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3003
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3003
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitor-service
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: monitor-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: streaming-encoder
+      component: monitor-service
+  template:
+    metadata:
+      labels:
+        app: streaming-encoder
+        component: monitor-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3004"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: monitor-service
+        image: streaming-encoder/monitor-service:latest
+        ports:
+        - containerPort: 3004
+          name: http
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: streaming-encoder-config
+              key: NODE_ENV
+        - name: DATABASE_URL
+          value: "postgresql://$(DATABASE_USERNAME):$(DATABASE_PASSWORD)@$(DATABASE_HOST):$(DATABASE_PORT)/$(DATABASE_NAME)"
+        - name: DATABASE_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: DATABASE_USERNAME
+        - name: DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-credentials
+              key: DATABASE_PASSWORD
+        - name: INFLUXDB_URL
+          valueFrom:
+            configMapKeyRef:
+              name: streaming-encoder-config
+              key: INFLUXDB_URL
+        - name: INFLUXDB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: influxdb-credentials
+              key: INFLUXDB_TOKEN
+        - name: INFLUXDB_ORG
+          valueFrom:
+            configMapKeyRef:
+              name: streaming-encoder-config
+              key: INFLUXDB_ORG
+        - name: INFLUXDB_BUCKET
+          valueFrom:
+            configMapKeyRef:
+              name: streaming-encoder-config
+              key: INFLUXDB_BUCKET
+        resources:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3004
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3

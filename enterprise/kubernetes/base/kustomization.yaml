@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - configmaps/
+  - secrets/
+  - database/
+  - redis/
+  - kafka/
+  - monitoring/
+  - services/
+  - deployments/
+  - ingress/
+  - network-policies/
+
+commonLabels:
+  app.kubernetes.io/name: streaming-encoder
+  app.kubernetes.io/version: v1.0.0
+  app.kubernetes.io/managed-by: kustomize
+
+commonAnnotations:
+  deployment.timestamp: "2024-01-15T00:00:00Z"
+  maintainer: "streaming-team@company.com"

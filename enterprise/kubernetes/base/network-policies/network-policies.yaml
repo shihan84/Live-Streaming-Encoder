@@ -1,0 +1,207 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal-traffic
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: network-policy
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: streaming-encoder
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: streaming-encoder
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-database-access
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: streaming-encoder
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: streaming-encoder
+          component: database
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-redis-access
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: streaming-encoder
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: streaming-encoder
+          component: redis
+    ports:
+    - protocol: TCP
+      port: 6379
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-kafka-access
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: streaming-encoder
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: streaming-encoder
+          component: kafka
+    ports:
+    - protocol: TCP
+      port: 9092
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-monitoring-access
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: streaming-encoder
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 9090  # Prometheus
+    - protocol: TCP
+      port: 9093  # Alertmanager
+    - protocol: TCP
+      port: 8086  # InfluxDB
+    - protocol: TCP
+      port: 16686 # Jaeger
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-external-ingress
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: streaming-encoder
+      component: nginx-gateway
+  policyTypes:
+  - Ingress
+  ingress:
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: restrict-database-access
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: streaming-encoder
+      component: database
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: streaming-encoder
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: restrict-redis-access
+  namespace: streaming-encoder
+  labels:
+    app: streaming-encoder
+    component: network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: streaming-encoder
+      component: redis
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: streaming-encoder
+    ports:
+    - protocol: TCP
+      port: 6379

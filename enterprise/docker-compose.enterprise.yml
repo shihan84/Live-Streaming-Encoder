@@ -1,0 +1,731 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # API Gateway & Load Balancer
+  # ==========================================
+  nginx-gateway:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./enterprise/config/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./enterprise/config/nginx/conf.d:/etc/nginx/conf.d
+      - ./enterprise/ssl:/etc/nginx/ssl
+    depends_on:
+      - api-gateway
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  api-gateway:
+    image: kong:latest
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    volumes:
+      - ./enterprise/config/kong/kong.yml:/etc/kong/kong.yml
+    ports:
+      - "8001:8001"
+    depends_on:
+      - stream-service
+      - ad-service
+      - encoder-service
+      - scte35-service
+    networks:
+      - streaming-network
+    restart: unless-stopped
+
+  # ==========================================
+  # Microservices
+  # ==========================================
+  stream-service:
+    build:
+      context: .
+      dockerfile: enterprise/docker/Dockerfile.stream
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://streaming:streaming_password@postgres:5432/streaming_db
+      REDIS_URL: redis://redis:6379
+      KAFKA_BROKERS: kafka:9092
+      JAEGER_AGENT_HOST: jaeger:6831
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  ad-service:
+    build:
+      context: .
+      dockerfile: enterprise/docker/Dockerfile.ad
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://streaming:streaming_password@postgres:5432/streaming_db
+      REDIS_URL: redis://redis:6379
+      KAFKA_BROKERS: kafka:9092
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  encoder-service:
+    build:
+      context: .
+      dockerfile: enterprise/docker/Dockerfile.encoder
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://streaming:streaming_password@postgres:5432/streaming_db
+      REDIS_URL: redis://redis:6379
+      KAFKA_BROKERS: kafka:9092
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+      - minio
+    volumes:
+      - ./logs:/app/logs
+      - ./hls:/var/www/hls
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 4
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  scte35-service:
+    build:
+      context: .
+      dockerfile: enterprise/docker/Dockerfile.scte35
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://streaming:streaming_password@postgres:5432/streaming_db
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  monitor-service:
+    build:
+      context: .
+      dockerfile: enterprise/docker/Dockerfile.monitor
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://streaming:streaming_password@postgres:5432/streaming_db
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_TOKEN: streaming_token
+      INFLUXDB_ORG: streaming_org
+      INFLUXDB_BUCKET: metrics
+    depends_on:
+      - postgres
+      - influxdb
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  config-service:
+    build:
+      context: .
+      dockerfile: enterprise/docker/Dockerfile.config
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://streaming:streaming_password@postgres:5432/streaming_db
+      REDIS_URL: redis://redis:6379
+      GIT_REPO: https://github.com/shihan84/Live-Streaming-Encoder-config
+      GIT_BRANCH: main
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./logs:/app/logs
+      - ./enterprise/config:/app/config
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # ==========================================
+  # Data Layer
+  # ==========================================
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: streaming_db
+      POSTGRES_USER: streaming
+      POSTGRES_PASSWORD: streaming_password
+      POSTGRES_REPLICATION_USER: replicator
+      POSTGRES_REPLICATION_PASSWORD: replication_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./enterprise/scripts/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./enterprise/config/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U streaming"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  postgres-replica:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: streaming_db
+      POSTGRES_USER: streaming
+      POSTGRES_PASSWORD: streaming_password
+      POSTGRES_REPLICATION_USER: replicator
+      POSTGRES_REPLICATION_PASSWORD: replication_password
+      POSTGRES_MASTER_SERVICE: postgres
+      POSTGRES_MASTER_PORT: 5432
+    depends_on:
+      - postgres
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+      - ./enterprise/config/postgres/replica.conf:/etc/postgresql/postgresql.conf
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass redis_password
+    volumes:
+      - redis_data:/data
+      - ./enterprise/config/redis/redis.conf:/etc/redis/redis.conf
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "redis-cli", "auth", "redis_password", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis-sentinel:
+    image: redis:7-alpine
+    command: redis-sentinel /etc/redis/sentinel.conf
+    volumes:
+      - ./enterprise/config/redis/sentinel.conf:/etc/redis/sentinel.conf
+    depends_on:
+      - redis
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  # ==========================================
+  # Message Queue & Event Streaming
+  # ==========================================
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_MESSAGE_MAX_BYTES: 10485760
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    depends_on:
+      - zookeeper
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  # ==========================================
+  # Time Series & Metrics
+  # ==========================================
+  influxdb:
+    image: influxdb:2.7-alpine
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: admin_password
+      DOCKER_INFLUXDB_INIT_ORG: streaming_org
+      DOCKER_INFLUXDB_INIT_BUCKET: metrics
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: streaming_token
+      DOCKER_INFLUXDB_INIT_RETENTION: 30d
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+      - ./enterprise/config/influxdb/config.yml:/etc/influxdb2/config.yml
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    ports:
+      - "8086:8086"
+
+  telegraf:
+    image: telegraf:latest
+    volumes:
+      - ./enterprise/config/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - influxdb
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin_password
+      GF_USERS_ALLOW_SIGN_UP: false
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./enterprise/config/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./enterprise/config/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - influxdb
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    ports:
+      - "3001:3000"
+
+  # ==========================================
+  # Object Storage
+  # ==========================================
+  minio:
+    image: minio/minio:latest
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  # ==========================================
+  # Monitoring & Observability
+  # ==========================================
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./enterprise/config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    ports:
+      - "9090:9090"
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    volumes:
+      - ./enterprise/config/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager_data:/alertmanager
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    ports:
+      - "9093:9093"
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    environment:
+      COLLECTOR_ZIPKIN_HOST_PORT: 9411
+    volumes:
+      - jaeger_data:/tmp/jaeger
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+
+  # ==========================================
+  # Logging & ELK Stack
+  # ==========================================
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=false
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    ports:
+      - "9200:9200"
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    volumes:
+      - ./enterprise/config/logstash/pipeline:/usr/share/logstash/pipeline
+      - ./logs:/logs
+    depends_on:
+      - elasticsearch
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    ports:
+      - "5601:5601"
+
+  # ==========================================
+  # Security Services
+  # ==========================================
+  vault:
+    image: vault:latest
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: streaming_vault_token
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    volumes:
+      - vault_data:/vault/file
+      - ./enterprise/config/vault:/vault/config
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    ports:
+      - "8200:8200"
+
+  # ==========================================
+  # Frontend Applications
+  # ==========================================
+  frontend-admin:
+    build:
+      context: .
+      dockerfile: enterprise/docker/Dockerfile.frontend
+      target: admin
+    environment:
+      NODE_ENV: production
+      REACT_APP_API_URL: https://api.streaming-encoder.com
+      REACT_APP_WS_URL: wss://api.streaming-encoder.com
+    depends_on:
+      - nginx-gateway
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  frontend-dashboard:
+    build:
+      context: .
+      dockerfile: enterprise/docker/Dockerfile.frontend
+      target: dashboard
+    environment:
+      NODE_ENV: production
+      REACT_APP_API_URL: https://api.streaming-encoder.com
+      REACT_APP_WS_URL: wss://api.streaming-encoder.com
+    depends_on:
+      - nginx-gateway
+    networks:
+      - streaming-network
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  postgres_data:
+  postgres_replica_data:
+  redis_data:
+  kafka_data:
+  zookeeper_data:
+  influxdb_data:
+  grafana_data:
+  prometheus_data:
+  alertmanager_data:
+  jaeger_data:
+  elasticsearch_data:
+  minio_data:
+  vault_data:
+
+networks:
+  streaming-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
