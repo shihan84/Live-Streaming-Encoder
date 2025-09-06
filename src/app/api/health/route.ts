@@ -23,10 +23,11 @@ export async function GET() {
     return NextResponse.json(healthStatus)
   } catch (error) {
     console.error('Health check error:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json(
       { 
         status: 'unhealthy',
-        error: error.message,
+        error: errorMessage,
         timestamp: new Date().toISOString()
       },
       { status: 500 }

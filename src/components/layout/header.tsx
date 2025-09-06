@@ -2,138 +2,205 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { ThemeToggle } from '@/components/theme-toggle'
 import { 
-  Bell, 
   Search, 
-  User, 
+  Bell, 
   Settings, 
-  HelpCircle,
-  Cloud,
+  User, 
+  ChevronDown,
   Activity,
-  AlertTriangle,
+  Wifi,
+  WifiOff,
+  AlertCircle,
   CheckCircle
 } from 'lucide-react'
 
 interface HeaderProps {
+  className?: string
   title?: string
   subtitle?: string
 }
 
-export function Header({ title, subtitle }: HeaderProps) {
-  const [searchQuery, setSearchQuery] = useState('')
+export function Header({ className, title, subtitle }: HeaderProps) {
+  const [notifications, setNotifications] = useState([
+    { id: 1, type: 'success', message: 'Stream 1 started successfully', time: '2 min ago' },
+    { id: 2, type: 'warning', message: 'High CPU usage detected', time: '5 min ago' },
+    { id: 3, type: 'error', message: 'Failed to connect to input source', time: '10 min ago' },
+  ])
+
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'success': return <CheckCircle className="h-4 w-4 text-green-500" />
+      case 'warning': return <AlertCircle className="h-4 w-4 text-yellow-500" />
+      case 'error': return <AlertCircle className="h-4 w-4 text-red-500" />
+      default: return <Activity className="h-4 w-4 text-blue-500" />
+    }
+  }
+
+  const getNotificationColor = (type: string) => {
+    switch (type) {
+      case 'success': return 'border-green-800 bg-green-900/20'
+      case 'warning': return 'border-yellow-800 bg-yellow-900/20'
+      case 'error': return 'border-red-800 bg-red-900/20'
+      default: return 'border-blue-800 bg-blue-900/20'
+    }
+  }
 
   return (
-    <header className="aws-header-gradient border-b border-gray-700/50 backdrop-blur supports-[backdrop-filter]:bg-gray-900/60">
-      <div className="container flex h-16 items-center">
-        <div className="flex flex-1 items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-white">{title || 'MediaLive Encoder'}</h1>
-              {subtitle && (
-                <p className="text-sm text-orange-400">{subtitle}</p>
-              )}
-            </div>
+    <header className={`aws-gradient-dark border-b border-gray-800 ${className}`}>
+      <div className="flex items-center justify-between px-6 py-4">
+        {/* Page Title */}
+        {title && (
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-white">{title}</h1>
+            {subtitle && (
+              <p className="text-gray-400 mt-1">{subtitle}</p>
+            )}
+          </div>
+        )}
+
+        {/* Search Bar and Actions */}
+        <div className="flex items-center space-x-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search streams, channels, or settings..."
+              className="w-96 pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:border-orange-500"
+            />
           </div>
           
-          <div className="flex items-center gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                type="search"
-                placeholder="Search channels, inputs..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 w-[300px] rounded-md border border-gray-600 bg-gray-800/80 backdrop-blur px-10 py-2 text-sm text-white placeholder:text-gray-400 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"
-              />
+          {/* System Status Indicators */}
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
+              <Wifi className="h-4 w-4 text-green-500" />
+              <span className="text-sm text-gray-300">Connected</span>
             </div>
-
-            {/* System Status */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <div className="h-2 w-2 rounded-full aws-status-online aws-pulse"></div>
-                <span className="text-sm font-medium text-white">System Healthy</span>
-              </div>
-              <Badge variant="outline" className="gap-1 border-orange-500/30 bg-orange-500/10 text-orange-400">
-                <Activity className="h-3 w-3" />
-                3 Active
-              </Badge>
+            <div className="flex items-center space-x-2">
+              <Activity className="h-4 w-4 text-green-500" />
+              <span className="text-sm text-gray-300">2 Active</span>
             </div>
+          </div>
+        </div>
 
-            {/* Notifications */}
-            <div className="relative">
-              <Button variant="ghost" size="icon" className="relative hover:text-orange-500">
-                <Bell className="h-5 w-5 text-gray-300" />
-                <Badge 
-                  variant="destructive" 
-                  className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs bg-orange-500 border-orange-500"
-                >
-                  2
+        {/* Right Side Actions */}
+        <div className="flex items-center space-x-4">
+          {/* Notifications */}
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="text-gray-300 hover:text-white hover:bg-gray-800 relative"
+            >
+              <Bell className="h-5 w-5" />
+              {notifications.length > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 bg-red-600 text-white text-xs p-0 flex items-center justify-center">
+                  {notifications.length}
                 </Badge>
-              </Button>
-            </div>
-
-            {/* Theme Toggle */}
-            <ThemeToggle />
-
-            {/* User Menu */}
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="hover:text-orange-500">
-                <HelpCircle className="h-5 w-5 text-gray-300" />
-              </Button>
-              <Button variant="ghost" size="icon" className="hover:text-orange-500">
-                <Settings className="h-5 w-5 text-gray-300" />
-              </Button>
-              <div className="flex items-center gap-2 border-l border-orange-500/30 pl-2">
-                <div className="h-8 w-8 rounded-full aws-gradient flex items-center justify-center aws-glow">
-                  <User className="h-4 w-4 text-white" />
+              )}
+            </Button>
+            
+            {/* Notifications Dropdown */}
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 bg-gray-900 border border-gray-800 rounded-lg shadow-lg z-50">
+                <div className="p-3 border-b border-gray-800">
+                  <h3 className="text-sm font-medium text-white">Notifications</h3>
                 </div>
-                <div className="text-sm">
-                  <div className="font-medium text-white">Admin User</div>
-                  <div className="text-xs text-orange-400">admin@company.com</div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={`p-3 border-b border-gray-800 ${getNotificationColor(notification.type)}`}
+                    >
+                      <div className="flex items-start space-x-3">
+                        {getNotificationIcon(notification.type)}
+                        <div className="flex-1">
+                          <p className="text-sm text-white">{notification.message}</p>
+                          <p className="text-xs text-gray-400 mt-1">{notification.time}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="p-3 border-t border-gray-800">
+                  <Button variant="ghost" size="sm" className="w-full text-orange-500 hover:text-orange-400">
+                    View All Notifications
+                  </Button>
                 </div>
               </div>
-            </div>
+            )}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-gray-300 hover:text-white hover:bg-gray-800"
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* User Menu */}
+          <div className="relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              className="flex items-center space-x-2 text-gray-300 hover:text-white hover:bg-gray-800"
+            >
+              <div className="w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center">
+                <User className="h-4 w-4 text-white" />
+              </div>
+              <span className="text-sm">Admin</span>
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+            
+            {/* User Menu Dropdown */}
+            {showUserMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-gray-900 border border-gray-800 rounded-lg shadow-lg z-50">
+                <div className="p-3 border-b border-gray-800">
+                  <p className="text-sm font-medium text-white">Admin User</p>
+                  <p className="text-xs text-gray-400">admin@example.com</p>
+                </div>
+                <div className="p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+                  >
+                    <User className="h-4 w-4 mr-2" />
+                    Profile
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+                  >
+                    <Settings className="h-4 w-4 mr-2" />
+                    Settings
+                  </Button>
+                  <hr className="my-1 border-gray-800" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-red-500 hover:text-red-400 hover:bg-gray-800"
+                  >
+                    Sign Out
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </header>
-  )
-}
-
-interface BreadcrumbItem {
-  label: string
-  href?: string
-}
-
-interface BreadcrumbProps {
-  items: BreadcrumbItem[]
-}
-
-export function Breadcrumb({ items }: BreadcrumbProps) {
-  return (
-    <nav className="flex items-center space-x-1 text-sm text-gray-400">
-      {items.map((item, index) => (
-        <div key={item.label} className="flex items-center">
-          {index > 0 && (
-            <span className="mx-2 text-orange-400">/</span>
-          )}
-          {item.href ? (
-            <a 
-              href={item.href} 
-              className="hover:text-orange-400 transition-colors"
-            >
-              {item.label}
-            </a>
-          ) : (
-            <span className="text-white font-medium">
-              {item.label}
-            </span>
-          )}
-        </div>
-      ))}
-    </nav>
   )
 }

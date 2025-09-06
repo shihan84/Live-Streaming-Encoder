@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,8 +14,8 @@ import {
   Calendar, 
   Shield, 
   Activity,
-  Input,
-  Output,
+  HardDrive,
+  MonitorSpeaker,
   Sliders,
   Menu,
   X,
@@ -27,8 +29,8 @@ interface SidebarProps {
 const navigation = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Channels', href: '/channels', icon: Users },
-  { name: 'Inputs', href: '/inputs', icon: Input },
-  { name: 'Outputs', href: '/outputs', icon: Output },
+  { name: 'Inputs', href: '/inputs', icon: HardDrive },
+  { name: 'Outputs', href: '/outputs', icon: MonitorSpeaker },
   { name: 'Profiles', href: '/profiles', icon: Sliders },
   { name: 'Schedules', href: '/schedules', icon: Calendar },
   { name: 'Monitoring', href: '/monitoring', icon: Monitor },
@@ -38,7 +40,15 @@ const navigation = [
 
 export function Sidebar({ className }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [activeItem, setActiveItem] = useState('Dashboard')
+  const pathname = usePathname()
+
+  const getActiveItem = () => {
+    const currentPath = pathname === '/' ? 'Dashboard' : 
+      pathname.slice(1).charAt(0).toUpperCase() + pathname.slice(2)
+    return currentPath
+  }
+
+  const activeItem = getActiveItem()
 
   return (
     <div className={cn(
@@ -72,18 +82,18 @@ export function Sidebar({ className }: SidebarProps) {
         <nav className="flex-1 p-4 space-y-2">
           {navigation.map((item) => {
             const Icon = item.icon
+            const isActive = activeItem === item.name
             return (
-              <Button
+              <Link
                 key={item.name}
-                variant={activeItem === item.name ? "default" : "ghost"}
+                href={item.href}
                 className={cn(
-                  'w-full justify-start text-left transition-all duration-200',
-                  activeItem === item.name 
+                  'inline-flex items-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=size-])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:hover:bg-accent/50 h-9 px-4 py-2 has-[>svg]:px-3 w-full justify-start text-left transition-all duration-200',
+                  isActive 
                     ? 'aws-button-gradient text-white' 
                     : 'text-gray-300 hover:text-white hover:bg-gray-800',
                   isCollapsed && 'justify-center px-2'
                 )}
-                onClick={() => setActiveItem(item.name)}
               >
                 <Icon className={cn(
                   'h-4 w-4',
@@ -99,7 +109,7 @@ export function Sidebar({ className }: SidebarProps) {
                     )}
                   </>
                 )}
-              </Button>
+              </Link>
             )
           })}
         </nav>

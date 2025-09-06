@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { MainLayout } from '@/components/layout/sidebar'
+import { MainLayout } from '@/components/layout/main-layout'
 import { Header } from '@/components/layout/header'
-import { Breadcrumb } from '@/components/layout/header'
+import { Breadcrumb } from '@/components/layout/breadcrumb'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -38,12 +38,12 @@ import {
   Search,
   Shield,
   Wifi,
-  Ethernet,
+  Network,
   Satellite,
   RadioIcon,
   Video,
   Mic,
-  Hdmi,
+  Tv,
   SdCard
 } from 'lucide-react'
 
@@ -226,9 +226,9 @@ export default function InputsPage() {
       case 'NDI':
         return <Wifi className="h-5 w-5" />
       case 'UDP':
-        return <Ethernet className="h-5 w-5" />
+        return <Network className="h-5 w-5" />
       case 'DeckLink':
-        return <Hdmi className="h-5 w-5" />
+        return <Tv className="h-5 w-5" />
       default:
         return <RadioIcon className="h-5 w-5" />
     }

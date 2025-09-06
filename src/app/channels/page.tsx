@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { MainLayout } from '@/components/layout/sidebar'
+import { MainLayout } from '@/components/layout/main-layout'
 import { Header } from '@/components/layout/header'
-import { Breadcrumb } from '@/components/layout/header'
+import { Breadcrumb } from '@/components/layout/breadcrumb'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
