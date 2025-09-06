@@ -192,67 +192,67 @@ export default function ChannelsPage() {
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
+          <Card className="aws-metric-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Channels</p>
-                  <p className="text-2xl font-bold">{channels.length}</p>
+                  <p className="text-sm font-medium text-gray-400">Total Channels</p>
+                  <p className="text-2xl font-bold text-white">{channels.length}</p>
                 </div>
-                <Radio className="h-8 w-8 text-blue-600" />
+                <Radio className="h-8 w-8 text-orange-400" />
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="aws-metric-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Active</p>
-                  <p className="text-2xl font-bold">{channels.filter(c => c.status === 'running').length}</p>
+                  <p className="text-sm font-medium text-gray-400">Active</p>
+                  <p className="text-2xl font-bold text-white">{channels.filter(c => c.status === 'running').length}</p>
                 </div>
-                <Play className="h-8 w-8 text-green-600" />
+                <Play className="h-8 w-8 text-green-400" />
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="aws-metric-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Viewers</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-sm font-medium text-gray-400">Total Viewers</p>
+                  <p className="text-2xl font-bold text-white">
                     {channels.reduce((acc, channel) => acc + channel.viewers, 0).toLocaleString()}
                   </p>
                 </div>
-                <Users className="h-8 w-8 text-purple-600" />
+                <Users className="h-8 w-8 text-purple-400" />
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="aws-metric-card">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Errors</p>
-                  <p className="text-2xl font-bold">{channels.filter(c => c.status === 'error').length}</p>
+                  <p className="text-sm font-medium text-gray-400">Errors</p>
+                  <p className="text-2xl font-bold text-white">{channels.filter(c => c.status === 'error').length}</p>
                 </div>
-                <AlertTriangle className="h-8 w-8 text-red-600" />
+                <AlertTriangle className="h-8 w-8 text-red-400" />
               </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Filters and Actions */}
-        <Card>
+        <Card className="aws-channel-card">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Channel Management</CardTitle>
-                <CardDescription>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-white">Channel Management</CardTitle>
+                <CardDescription className="text-gray-400">
                   Configure and manage your streaming channels
                 </CardDescription>
               </div>
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button className="aws-button-gradient">
                     <Plus className="h-4 w-4 mr-2" />
                     Create Channel
                   </Button>
@@ -362,123 +362,141 @@ export default function ChannelsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center space-x-4 mb-6">
-              <div className="flex-1">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+              <div className="flex-1 min-w-0">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <Input
                     placeholder="Search channels..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 bg-gray-800/80 border-gray-600 text-white placeholder:text-gray-400"
                   />
                 </div>
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="running">Running</SelectItem>
-                  <SelectItem value="stopped">Stopped</SelectItem>
-                  <SelectItem value="error">Error</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-40 bg-gray-800/80 border-gray-600 text-white">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="running">Running</SelectItem>
+                    <SelectItem value="stopped">Stopped</SelectItem>
+                    <SelectItem value="error">Error</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-4">
               {filteredChannels.map((channel) => (
-                <Card key={channel.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-2">
+                <Card key={channel.id} className="aws-channel-card hover:shadow-lg transition-all duration-300">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="flex-shrink-0">
                           {getStatusIcon(channel.status)}
-                          <div>
-                            <h3 className="font-semibold">{channel.name}</h3>
-                            <p className="text-sm text-muted-foreground">{channel.id}</p>
-                          </div>
                         </div>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-white truncate">{channel.name}</h3>
+                          <p className="text-sm text-gray-400 truncate">{channel.id}</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2 flex-shrink-0">
                           {getStatusBadge(channel.status)}
                           {channel.scte35Enabled && (
-                            <Badge variant="outline">SCTE-35</Badge>
+                            <Badge variant="outline" className="border-orange-500/30 bg-orange-500/10 text-orange-400">
+                              SCTE-35
+                            </Badge>
                           )}
                           {channel.cdnEnabled && (
-                            <Badge variant="outline">CDN</Badge>
+                            <Badge variant="outline" className="border-blue-500/30 bg-blue-500/10 text-blue-400">
+                              CDN
+                            </Badge>
                           )}
                         </div>
                       </div>
                       
-                      <div className="flex items-center space-x-4">
-                        <div className="text-right">
-                          <div className="text-sm font-medium">{channel.viewers.toLocaleString()}</div>
-                          <div className="text-xs text-muted-foreground">viewers</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium">{channel.bitrate}</div>
-                          <div className="text-xs text-muted-foreground">bitrate</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium">{channel.uptime}</div>
-                          <div className="text-xs text-muted-foreground">uptime</div>
+                      <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 w-full lg:w-auto">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm w-full lg:w-auto">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <Monitor className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-gray-300 truncate">{channel.inputType}</span>
+                          </div>
+                          <div className="flex items-center gap-1 min-w-0">
+                            <Film className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-gray-300 truncate">{channel.outputType}</span>
+                          </div>
+                          <div className="flex items-center gap-1 min-w-0">
+                            <Zap className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-gray-300 truncate">{channel.bitrate}</span>
+                          </div>
                         </div>
                         
-                        <div className="flex items-center space-x-2">
-                          {channel.status === 'running' ? (
-                            <Button variant="outline" size="sm">
-                              <Square className="h-4 w-4" />
+                        <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+                          <div className="text-center sm:text-right">
+                            <div className="text-sm font-medium text-white">{channel.viewers.toLocaleString()}</div>
+                            <div className="text-xs text-gray-400">viewers</div>
+                          </div>
+                          <div className="text-center sm:text-right">
+                            <div className="text-sm font-medium text-white">{channel.uptime}</div>
+                            <div className="text-xs text-gray-400">uptime</div>
+                          </div>
+                          <div className="flex gap-2">
+                            {channel.status === 'running' ? (
+                              <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-800">
+                                <Square className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-800">
+                                <Play className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-800">
+                              <Settings className="h-4 w-4" />
                             </Button>
-                          ) : (
-                            <Button variant="outline" size="sm">
-                              <Play className="h-4 w-4" />
+                            <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-800">
+                              <BarChart3 className="h-4 w-4" />
                             </Button>
-                          )}
-                          <Button variant="outline" size="sm">
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <BarChart3 className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Copy className="h-4 w-4" />
-                          </Button>
+                            <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-800">
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="mt-4 pt-4 border-t">
+                    <div className="mt-4 pt-4 border-t border-gray-700">
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <div className="flex items-center space-x-1 text-muted-foreground">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1 text-gray-400 mb-1">
                             <Monitor className="h-4 w-4" />
                             <span>Input:</span>
                           </div>
-                          <div className="font-medium">{channel.inputType} - {channel.inputUrl}</div>
+                          <div className="font-medium text-white truncate">{channel.inputType} - {channel.inputUrl}</div>
                           {channel.backupInput && (
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-xs text-gray-400 truncate">
                               Backup: {channel.backupInput}
                             </div>
                           )}
                         </div>
-                        <div>
-                          <div className="flex items-center space-x-1 text-muted-foreground">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1 text-gray-400 mb-1">
                             <Film className="h-4 w-4" />
                             <span>Output:</span>
                           </div>
-                          <div className="font-medium">{channel.outputType}</div>
-                          <div className="text-xs text-muted-foreground truncate">
+                          <div className="font-medium text-white">{channel.outputType}</div>
+                          <div className="text-xs text-gray-400 truncate">
                             {channel.outputUrl}
                           </div>
                         </div>
-                        <div>
-                          <div className="flex items-center space-x-1 text-muted-foreground">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1 text-gray-400 mb-1">
                             <Zap className="h-4 w-4" />
                             <span>Profile:</span>
                           </div>
-                          <div className="font-medium">{channel.encodingProfile}</div>
-                          <div className="text-xs text-muted-foreground">
+                          <div className="font-medium text-white truncate">{channel.encodingProfile}</div>
+                          <div className="text-xs text-gray-400">
                             Created: {new Date(channel.createdAt).toLocaleDateString()}
                           </div>
                         </div>

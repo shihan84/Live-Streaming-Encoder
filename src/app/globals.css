@@ -275,3 +275,204 @@
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* Responsive Text Handling - Prevent Overlap */
+
+/* Prevent text overlap in cards */
+.card-content {
+  @apply min-w-0;
+}
+
+.card-title {
+  @apply truncate;
+  max-width: 100%;
+}
+
+.card-subtitle {
+  @apply text-sm truncate;
+  max-width: 100%;
+}
+
+/* Channel-specific fixes */
+.channel-name {
+  @apply font-medium truncate;
+  max-width: 200px;
+}
+
+.channel-id {
+  @apply text-xs text-muted-foreground truncate;
+  max-width: 150px;
+}
+
+.channel-meta {
+  @apply flex items-center gap-2 text-xs;
+}
+
+.channel-meta-item {
+  @apply flex items-center gap-1 min-w-0;
+}
+
+.channel-meta-text {
+  @apply truncate;
+  max-width: 120px;
+}
+
+/* Input source fixes */
+.input-url {
+  @apply text-xs break-all font-mono;
+  max-width: 300px;
+  word-break: break-all;
+}
+
+.input-health {
+  @apply flex items-center gap-2 text-xs;
+}
+
+/* Profile fixes */
+.profile-name {
+  @apply font-medium truncate;
+  max-width: 180px;
+}
+
+.profile-description {
+  @apply text-sm text-muted-foreground line-clamp-2;
+}
+
+.profile-specs {
+  @apply grid grid-cols-2 gap-2 text-xs;
+}
+
+.profile-spec-item {
+  @apply flex justify-between;
+}
+
+.profile-spec-label {
+  @apply text-muted-foreground;
+}
+
+.profile-spec-value {
+  @apply font-medium truncate;
+  max-width: 100px;
+}
+
+/* Mobile responsive fixes */
+@media (max-width: 640px) {
+  .channel-name {
+    max-width: 120px;
+  }
+  
+  .channel-meta-text {
+    max-width: 80px;
+  }
+  
+  .input-url {
+    max-width: 200px;
+  }
+  
+  .profile-name {
+    max-width: 140px;
+  }
+  
+  .profile-spec-value {
+    max-width: 80px;
+  }
+  
+  /* Stack cards vertically on mobile */
+  .card-grid {
+    @apply grid-cols-1;
+  }
+  
+  /* Make buttons larger for touch */
+  .touch-button {
+    @apply h-12 px-4;
+  }
+}
+
+/* Dialog and modal fixes */
+.dialog-content {
+  @apply max-w-4xl max-h-[90vh] overflow-y-auto;
+}
+
+.dialog-form {
+  @apply space-y-4;
+}
+
+.dialog-section {
+  @apply space-y-3;
+}
+
+.dialog-field {
+  @apply space-y-2;
+}
+
+.dialog-label {
+  @apply text-sm font-medium whitespace-nowrap;
+}
+
+.dialog-input {
+  @apply w-full;
+}
+
+/* Table fixes */
+.table-container {
+  @apply overflow-x-auto;
+}
+
+.table-cell {
+  @apply px-4 py-2 text-sm;
+}
+
+.table-cell-truncate {
+  @apply truncate max-w-[200px];
+}
+
+/* Alert fixes */
+.alert-message {
+  @apply text-sm truncate;
+  max-width: 300px;
+}
+
+.alert-timestamp {
+  @apply text-xs text-muted-foreground whitespace-nowrap;
+}
+
+/* Metric cards */
+.metric-value {
+  @apply text-2xl font-bold truncate;
+}
+
+.metric-label {
+  @apply text-sm text-muted-foreground;
+}
+
+.metric-change {
+  @apply text-xs;
+}
+
+/* Sidebar fixes */
+.sidebar-item {
+  @apply w-full;
+}
+
+.sidebar-text {
+  @apply truncate;
+  max-width: 160px;
+}
+
+/* Progress bars */
+.progress-container {
+  @apply w-full;
+}
+
+.progress-label {
+  @apply text-sm justify-between;
+}
+
+/* Badge fixes */
+.badge-truncate {
+  @apply text-xs px-2 py-1;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
