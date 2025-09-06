@@ -1,362 +1,370 @@
-# 🎬 Live Streaming Encoder with SCTE-35 Ad Marker & Scheduler
+# MediaLive Encoder
 
-A professional-grade live streaming encoder with comprehensive SCTE-35 ad marker support and scheduling capabilities, built with Docker and powered by superkabuki's SCTE-35 tools.
+![AWS Elemental MediaLive Inspired Theme](https://img.shields.io/badge/Theme-AWS%20Elemental%20MediaLive-orange?style=for-the-badge&logo=amazon&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=for-the-badge&logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-cyan?style=for-the-badge&logo=tailwindcss&logoColor=white)
 
-## ✨ Features
+A professional, enterprise-grade live streaming encoder with SCTE-35 ad marker and scheduler support, inspired by AWS Elemental MediaLive. Built with Next.js 15, TypeScript, and featuring a stunning orange/dark gradient theme.
 
-### 🎥 Core Streaming Features
-- **Multi-bitrate Adaptive Bitrate (ABR) Streaming**
-- **Real-time video encoding with FFmpeg**
-- **HLS segmentation and delivery**
-- **SCTE-35 ad marker injection**
-- **Live stream monitoring and management**
-- **WebSocket real-time status updates**
+## 🎯 Features
 
-### 📺 SCTE-35 Ad Integration
-- **SCTE-35 splice_insert and time_signal generation**
-- **Ad break scheduling and automation**
-- **Sidecar file generation**
-- **HLS playlist SCTE-35 injection**
-- **Provider ID and ad management**
-- **Auto-return functionality**
+### Core Functionality
+- **Live Streaming Encoder**: Professional-grade video encoding with multiple input/output support
+- **SCTE-35 Integration**: Complete ad marker and scheduling system
+- **Multi-format Support**: RTMP, SRT, NDI, UDP, and DeckLink input sources
+- **Real-time Monitoring**: System health, channel status, and performance metrics
+- **Channel Management**: Create, configure, and manage multiple streaming channels
+- **Encoding Profiles**: Advanced video/audio encoding presets and configurations
+- **Event Scheduling**: Automated ad break scheduling and triggering
+- **Professional UI**: AWS Elemental MediaLive-inspired dark theme with orange accents
 
-### 🛠️ Professional Tools
-- **FFmpeg with SCTE-35 patch (superkabuki/SCTE35_FFmpeg)**
-- **threefive SCTE-35 library integration**
-- **x9k3 HLS segmenter with SCTE-35 support**
-- **adbreak3 fast SCTE-35 sidecar generation**
-- **m3ufu SCTE-35 aware HLS parsing**
+### Technical Features
+- **Next.js 15**: Latest Next.js with App Router and server components
+- **TypeScript**: Full type safety throughout the application
+- **Tailwind CSS 4**: Modern utility-first CSS framework
+- **shadcn/ui**: Professional UI component library
+- **Prisma ORM**: Database management with SQLite
+- **Docker Support**: Containerized deployment ready
+- **WebSocket Support**: Real-time updates and notifications
+- **REST API**: Complete backend API for all operations
 
-### 🎨 Modern Web Interface
-- **Responsive dashboard with real-time updates**
-- **Stream configuration and management**
-- **Ad break scheduling interface**
-- **System monitoring and logging**
-- **Professional UI with shadcn/ui components**
-
-## 🏗️ Architecture
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Next.js App   │    │   FFmpeg +      │    │   SCTE-35       │
-│   (Dashboard)   │◄──►│   SCTE-35       │◄──►│   Tools         │
-│                 │    │   Encoder       │    │   (threefive,   │
-│   WebSocket     │    │                 │    │    x9k3, etc.)  │
-│   Real-time     │    │   HLS Output    │    │                 │
-│   Updates       │    │                 │    │   Sidecar       │
-└─────────────────┘    └─────────────────┘    │   Files         │
-         │                     │              └─────────────────┘
-         │                     │                       │
-         ▼                     ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Database      │    │   Nginx         │    │   Redis         │
-│   (SQLite)      │    │   HLS Serving   │    │   (Optional)    │
-│                 │    │                 │    │                 │
-│   Streams       │    │   Web Server    │    │   Caching       │
-│   Ad Breaks     │    │                 │    │   Sessions       │
-│   Sessions      │    │   CORS Support  │    │                 │
-│   Logs          │    │                 │    │   Pub/Sub       │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
+### UI/UX Features
+- **AWS Elemental MediaLive Theme**: Professional dark theme with orange gradients
+- **Responsive Design**: Mobile, tablet, and desktop optimized
+- **Real-time Updates**: Live status updates and monitoring
+- **Professional Navigation**: Multi-level sidebar with collapsible sections
+- **Interactive Dashboard**: Comprehensive system overview and metrics
+- **Advanced Filtering**: Search and filter capabilities across all sections
+- **Accessibility**: WCAG compliant with proper contrast and navigation
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Docker and Docker Compose
-- Node.js 18+ (for development)
-- Basic understanding of live streaming concepts
 
-### 1. Clone and Setup
-```bash
-git clone <repository-url>
-cd live-streaming-encoder
+- Node.js 18+ 
+- npm or yarn
+- Git
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/medialive-encoder.git
+   cd medialive-encoder
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   # or
+   yarn install
+   ```
+
+3. **Set up the database**
+   ```bash
+   npm run db:push
+   ```
+
+4. **Start the development server**
+   ```bash
+   npm run dev
+   # or
+   yarn dev
+   ```
+
+5. **Open your browser**
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+## 🏗️ Project Structure
+
+```
+medialive-encoder/
+├── src/
+│   ├── app/                    # Next.js App Router pages
+│   │   ├── api/               # API routes
+│   │   │   ├── streams/        # Stream management API
+│   │   │   ├── adbreaks/       # Ad break management API
+│   │   │   └── encoding/       # Encoding session API
+│   │   ├── channels/          # Channel management page
+│   │   ├── dashboard/         # Main dashboard
+│   │   ├── inputs/            # Input sources management
+│   │   ├── profiles/          # Encoding profiles
+│   │   ├── layout.tsx         # Root layout
+│   │   └── page.tsx           # Home page (redirect)
+│   ├── components/            # Reusable components
+│   │   ├── layout/            # Layout components
+│   │   │   ├── sidebar.tsx     # Navigation sidebar
+│   │   │   └── header.tsx      # Page header
+│   │   ├── theme-toggle.tsx   # Theme toggle
+│   │   └── ui/                # shadcn/ui components
+│   ├── lib/                   # Utility libraries
+│   │   ├── db.ts              # Database client
+│   │   ├── socket.ts          # WebSocket logic
+│   │   └── utils.ts           # Utility functions
+│   └── app/
+│       └── globals.css         # Global styles and AWS theme
+├── prisma/
+│   └── schema.prisma          # Database schema
+├── public/                    # Static assets
+├── docker-compose.yml         # Docker configuration
+├── Dockerfile                 # Docker image
+├── .gitignore                # Git ignore rules
+├── package.json              # Project dependencies
+├── tailwind.config.ts        # Tailwind CSS configuration
+├── tsconfig.json            # TypeScript configuration
+└── README.md                 # This file
 ```
 
-### 2. Start the Application
-```bash
-# Start all services
-docker-compose up -d
+## 🎨 AWS Elemental MediaLive Theme
 
-# Or start with specific profiles
-docker-compose --profile tools up -d
-```
+The application features a professional dark theme inspired by AWS Elemental MediaLive:
 
-### 3. Access the Application
-- **Dashboard**: http://localhost:3000
-- **HLS Content**: http://localhost:8080/hls/
-- **Health Check**: http://localhost:8080/health
+### Color Scheme
+- **Primary Orange**: `#ff9900` (AWS brand color)
+- **Dark Background**: `#0f1419` (Deep space gray)
+- **Card Background**: `#1a1f36` (Dark blue-gray)
+- **Text Primary**: `#ffffff` (White)
+- **Text Secondary**: `#d1d5db` (Light gray)
 
-## 🐳 Docker Services
+### Theme Classes
+- `.aws-gradient`: Main orange gradient for branding
+- `.aws-gradient-dark`: Dark background gradients
+- `.aws-metric-card`: Professional metric card styling
+- `.aws-button-gradient`: Orange gradient buttons
+- `.aws-progress-bar`: Orange gradient progress indicators
+- `.aws-scrollbar`: Custom orange-themed scrollbars
 
-### Core Services
-- **streaming-encoder**: Main Next.js application with dashboard
-- **db**: SQLite database for storing configuration and logs
-- **nginx**: Web server for HLS content delivery
+### Visual Effects
+- **Glass Morphism**: Backdrop blur effects on cards
+- **Smooth Animations**: Hover transitions and pulsing indicators
+- **Professional Gradients**: Multi-layer gradient backgrounds
+- **Glow Effects**: Subtle glow on important elements
 
-### Tool Services (optional)
-- **ffmpeg-scte35**: FFmpeg with SCTE-35 patch
-- **scte35-tools**: SCTE-35 utilities (threefive, adbreak3, m3ufu)
-- **hls-segmenter**: x9k3 HLS segmenter with SCTE-35
-- **redis**: Caching and session management
-
-## 📚 API Documentation
+## 📊 API Documentation
 
 ### Streams API
-```bash
-# Get all streams
-GET /api/streams
-
-# Create new stream
-POST /api/streams
-{
-  "name": "Main Stream",
-  "inputUrl": "rtmp://input.example.com/live/stream1",
-  "outputUrl": "http://output.example.com/live/stream1.m3u8",
-  "bitrate": 2500,
-  "resolution": "1920x1080",
-  "scte35Enabled": true
-}
-
-# Update stream
-PUT /api/streams/[id]
-
-# Delete stream
-DELETE /api/streams/[id]
-```
+- `GET /api/streams` - Get all streams
+- `POST /api/streams` - Create new stream
+- `GET /api/streams/[id]` - Get specific stream
+- `PUT /api/streams/[id]` - Update stream
+- `DELETE /api/streams/[id]` - Delete stream
 
 ### Ad Breaks API
-```bash
-# Get all ad breaks
-GET /api/adbreaks
-
-# Create ad break
-POST /api/adbreaks
-{
-  "streamId": "stream-id",
-  "scheduledTime": "2024-01-15T14:30:00Z",
-  "duration": 30,
-  "adId": "ad001",
-  "providerName": "YourProvider",
-  "providerId": "0x1"
-}
-
-# Update ad break
-PUT /api/adbreaks/[id]
-
-# Delete ad break
-DELETE /api/adbreaks/[id]
-```
+- `GET /api/adbreaks` - Get all ad breaks
+- `POST /api/adbreaks` - Create new ad break
+- `GET /api/adbreaks/[id]` - Get specific ad break
+- `PUT /api/adbreaks/[id]` - Update ad break
+- `DELETE /api/adbreaks/[id]` - Delete ad break
 
 ### Encoding Sessions API
-```bash
-# Get all encoding sessions
-GET /api/encoding
-
-# Start encoding session
-POST /api/encoding
-{
-  "streamId": "stream-id"
-}
-
-# Update encoding session
-PUT /api/encoding/[id]
-{
-  "status": "RUNNING",
-  "progress": 75,
-  "inputBytes": 1024000,
-  "outputBytes": 512000
-}
-
-# Stop encoding session
-DELETE /api/encoding/[id]
-```
+- `GET /api/encoding` - Get all encoding sessions
+- `POST /api/encoding` - Start encoding session
 
 ## 🔧 Configuration
 
 ### Environment Variables
-```bash
+
+Create a `.env.local` file in the root directory:
+
+```env
 # Database
-DATABASE_URL=file:./dev.db
+DATABASE_URL="file:./dev.db"
 
 # Application
-NODE_ENV=production
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=your-secret-key-here
+NEXT_PUBLIC_APP_NAME="MediaLive Encoder"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
 
-# SCTE-35 Settings
-SCTE35_PROVIDER_ID=0x1
-SCTE35_PROVIDER_NAME=YourProvider
-SCTE35_AUTO_RETURN=true
+# FFmpeg Configuration
+FFMPEG_PATH="/usr/local/bin/ffmpeg"
+FFMPEG_LOG_LEVEL="info"
+
+# SCTE-35 Configuration
+SCTE35_ENABLED=true
+SCTE35_PROVIDER="YourProvider"
+SCTE35_PROVIDER_ID="0x1"
+
+# HLS Configuration
+HLS_SEGMENT_DURATION=6
+HLS_PLAYLIST_SIZE=5
+HLS_OUTPUT_DIR="/var/www/hls"
 ```
 
-### System Settings
-Configure system settings through the dashboard UI or API:
-- FFmpeg path and parameters
-- HLS segmentation settings
-- SCTE-35 provider configuration
-- Output directories and paths
+### Database Schema
 
-## 🎯 Usage Examples
+The application uses Prisma ORM with SQLite. The main entities include:
 
-### 1. Create a Live Stream
+- **Streams**: Live streaming channel configurations
+- **EncodingSessions**: Active encoding session tracking
+- **AdBreaks**: SCTE-35 ad break scheduling and management
+- **SystemSettings**: Application-wide configuration
+- **SystemLogs**: Application logging and auditing
+
+## 🐳 Docker Deployment
+
+### Building the Image
+
 ```bash
-# Via API
-curl -X POST http://localhost:3000/api/streams \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Live Event",
-    "inputUrl": "rtmp://input.example.com/live/event",
-    "outputUrl": "http://localhost:8080/hls/event.m3u8",
-    "bitrate": 5000,
-    "resolution": "1920x1080",
-    "scte35Enabled": true
-  }'
+docker build -t medialive-encoder .
 ```
 
-### 2. Schedule an Ad Break
+### Running with Docker Compose
+
 ```bash
-# Via API
-curl -X POST http://localhost:3000/api/adbreaks \
-  -H "Content-Type: application/json" \
-  -d '{
-    "streamId": "stream-id",
-    "scheduledTime": "2024-01-15T14:30:00Z",
-    "duration": 30,
-    "adId": "commercial-001",
-    "providerName": "YourProvider"
-  }'
+docker-compose up -d
 ```
 
-### 3. Start Encoding
-```bash
-# Via API
-curl -X POST http://localhost:3000/api/encoding \
-  -H "Content-Type: application/json" \
-  -d '{"streamId": "stream-id"}'
+### Docker Compose Configuration
+
+```yaml
+version: '3.8'
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:./data/app.db
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    restart: unless-stopped
 ```
-
-### 4. Generate SCTE-35 Sidecar File
-```bash
-# Using Docker tools
-docker-compose run --rm scte35-tools \
-  python /app/scripts/scte35-tools.py sidecar \
-  adbreaks.json --output sidecar.json
-```
-
-## 🔍 Monitoring
-
-### System Status
-- **Encoder Status**: Real-time encoding status
-- **SCTE-35 Service**: SCTE-35 marker generation status
-- **HLS Segmenter**: Segmentation and injection status
-- **Ad Scheduler**: Scheduled and triggered ad breaks
-
-### Logs and Metrics
-- **System Logs**: Comprehensive logging with different levels
-- **Stream Metrics**: Bitrate, resolution, input/output bytes
-- **Ad Break Metrics**: Scheduled, triggered, completed ad breaks
-- **Performance Metrics**: Encoding progress and system health
-
-## 🛠️ Development
-
-### Local Development
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Run database migrations
-npm run db:push
-
-# Run linting
-npm run lint
-```
-
-### Building Custom Tools
-```bash
-# Build FFmpeg with SCTE-35
-docker build -f Dockerfile.ffmpeg -t ffmpeg-scte35 .
-
-# Build SCTE-35 tools
-docker build -f Dockerfile.scte35 -t scte35-tools .
-
-# Build HLS segmenter
-docker build -f Dockerfile.x9k3 -t x9k3-segmenter .
-```
-
-## 📚 SCTE-35 Integration
-
-### Supported SCTE-35 Commands
-- **splice_insert**: Insert ad breaks with duration
-- **time_signal**: Time-based ad break triggers
-- **splice_null**: Null splice events
-- **segmentation_descriptor**: Segment boundaries
-
-### Integration with superkabuki Tools
-- **SCTE35_FFmpeg**: FFmpeg with SCTE-35 pass-through
-- **SCTE35_threefive**: Advanced SCTE-35 parsing and generation
-- **SCTE35_x9k3**: HLS segmentation with SCTE-35 injection
-- **adbreak3**: Fast SCTE-35 sidecar file generation
-- **m3ufu**: SCTE-35 aware HLS playlist parsing
-
-## 🔒 Security
-
-### Best Practices
-- **Input Validation**: All API inputs are validated
-- **Authentication**: Ready for NextAuth.js integration
-- **CORS**: Configured for HLS streaming
-- **Rate Limiting**: Ready for production deployment
-- **Secure Headers**: Nginx security headers configured
 
 ## 🚀 Deployment
 
-### Production Deployment
-```bash
-# Build and deploy
-docker-compose -f docker-compose.prod.yml up -d
+### Vercel Deployment
 
-# Scale services
-docker-compose up -d --scale streaming-encoder=3
+1. **Connect to Vercel**
+   ```bash
+   npm i -g vercel
+   vercel login
+   ```
 
-# Update services
-docker-compose pull && docker-compose up -d
-```
+2. **Deploy**
+   ```bash
+   vercel
+   ```
 
-### Monitoring and Logging
-- **Health Checks**: Built-in health check endpoints
-- **Log Aggregation**: Centralized logging with different levels
-- **Metrics**: Performance and usage metrics
-- **Alerts**: Ready for integration with monitoring systems
+### Docker Deployment
+
+1. **Build the image**
+   ```bash
+   docker build -t medialive-encoder:latest .
+   ```
+
+2. **Run the container**
+   ```bash
+   docker run -p 3000:3000 medialive-encoder:latest
+   ```
+
+### Traditional Server Deployment
+
+1. **Build the application**
+   ```bash
+   npm run build
+   ```
+
+2. **Start the production server**
+   ```bash
+   npm start
+   ```
+
+## 📈 Monitoring & Logging
+
+### System Monitoring
+- **CPU Usage**: Real-time CPU utilization tracking
+- **Memory Usage**: Memory consumption monitoring
+- **Disk Usage**: Storage space monitoring
+- **Network I/O**: Network traffic monitoring
+
+### Application Logging
+- **System Logs**: Application-level logging
+- **Error Tracking**: Error and exception logging
+- **Performance Metrics**: Request timing and performance data
+- **Audit Logs**: User actions and system changes
+
+### Real-time Updates
+- **WebSocket Support**: Live status updates
+- **Event Notifications**: Real-time alert system
+- **Health Checks**: System health monitoring
+- **Metrics Dashboard**: Comprehensive performance metrics
+
+## 🔒 Security Features
+
+### Authentication & Authorization
+- **Session Management**: Secure user sessions
+- **Role-based Access**: User permission management
+- **API Key Management**: Secure API key generation and management
+- **Audit Logging**: Complete audit trail of user actions
+
+### Data Protection
+- **Input Validation**: Comprehensive input sanitization
+- **SQL Injection Prevention**: Parameterized queries with Prisma
+- **XSS Protection**: Content Security Policy implementation
+- **CSRF Protection**: Cross-site request forgery prevention
+
+### Network Security
+- **HTTPS Support**: SSL/TLS encryption
+- **CORS Configuration**: Cross-origin resource sharing setup
+- **Rate Limiting**: API request rate limiting
+- **Security Headers**: Comprehensive security header implementation
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+
+### Development Workflow
+
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Make your changes**
+4. **Add tests** if applicable
+5. **Commit your changes** (`git commit -m 'Add amazing feature'`)
+6. **Push to the branch** (`git push origin feature/amazing-feature`)
+7. **Open a Pull Request**
+
+### Code Style
+
+- **TypeScript**: Strict TypeScript mode enabled
+- **ESLint**: Code linting with Next.js rules
+- **Prettier**: Code formatting (if configured)
+- **Conventional Commits**: Commit message formatting
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- **superkabuki** for the excellent SCTE-35 tools and libraries
-- **threefive** library for SCTE-35 parsing and generation
-- **FFmpeg** for the powerful multimedia framework
-- **Next.js** team for the amazing React framework
-- **shadcn/ui** for the beautiful component library
+- **AWS Elemental MediaLive**: Inspiration for the UI/UX design
+- **Next.js Team**: For the excellent React framework
+- **shadcn/ui**: For the beautiful UI components
+- **Tailwind CSS**: For the utility-first CSS framework
+- **Prisma**: For the excellent ORM
+- **SuperKabuki**: For the SCTE-35 libraries and tools
 
 ## 📞 Support
 
-For support and questions:
-- Create an issue on GitHub
-- Check the documentation
-- Review the API examples
+If you encounter any issues or have questions:
+
+1. **Check the documentation**: Review this README and inline code comments
+2. **Search existing issues**: Check GitHub Issues for similar problems
+3. **Create a new issue**: Provide detailed information about your problem
+4. **Join discussions**: Participate in GitHub Discussions
+
+## 📊 Project Status
+
+- ✅ **Core Architecture**: Next.js 15 with App Router
+- ✅ **Database Layer**: Prisma ORM with SQLite
+- ✅ **API Layer**: RESTful API endpoints
+- ✅ **UI Components**: Professional interface with AWS theme
+- ✅ **Real-time Features**: WebSocket support
+- ✅ **Docker Support**: Containerization ready
+- 🚧 **Advanced Features**: Additional encoding profiles and monitoring
+- 🚧 **Testing**: Comprehensive test suite
+- 🚧 **Documentation**: Extended API documentation
 
 ---
 
-Built with ❤️ for professional live streaming. Powered by superkabuki's SCTE-35 tools 🎬
+Built with ❤️ using Next.js, TypeScript, and inspired by AWS Elemental MediaLive
